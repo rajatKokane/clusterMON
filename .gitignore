@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+cluster_mon.duckdb
+*.duckdb
+config.json
+.env

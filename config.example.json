@@ -1,0 +1,18 @@
+{
+    "nodes": [
+        {
+            "node_id": "test-server-01",
+            "bmc_url": "https://172.16.1.16",
+            "username": "root",
+            "password_env": "CLUSTERMON_TEST_SERVER_01_PASSWORD",
+            "verify_ssl": false
+        },
+        {
+            "node_id": "test-server-02",
+            "bmc_url": "https://172.16.1.17",
+            "username": "root",
+            "password_env": "CLUSTERMON_TEST_SERVER_02_PASSWORD",
+            "verify_ssl": false
+        }
+    ]
+}
