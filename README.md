@@ -1,4 +1,4 @@
-# ClusterMON v0.1
+# ClusterMON v0.3
 
 A minimal, open-source Redfish-based HPC node monitoring TUI.
 
@@ -12,10 +12,50 @@ A minimal, open-source Redfish-based HPC node monitoring TUI.
 - Reported chassis health
 - Per-node collection status
 - DuckDB metric history
+- Terminal-native CPU temperature and fan-speed graphs
+- Selectable node telemetry history
+- Fifteen-minute graph window
 - Five-second refresh
 - Debug logging
 - Configuration validation
 - Offline/unit tests for component parsing
+
+## v0.3 changes
+
+- Numeric telemetry is stored as DuckDB `DOUBLE` values.
+- Text telemetry such as `On`/`Off` is stored separately in `text_value`.
+- Existing v0.1/v0.2 databases are migrated automatically without discarding history.
+- One persistent HTTP/Redfish client is reused per BMC instead of creating a new TLS/client session every poll.
+- BMC discovery asks for confirmation before scanning all detected local subnets; use `--yes` for unattended operation.
+- Discovery no longer carries a dead node-ID mode parameter.
+
+## Automatic BMC discovery
+
+ClusterMON includes a bootstrap tool for discovering Redfish BMCs on the local network. It detects valid Redfish endpoints and writes `config.json`. A scan of all connected /24-or-smaller IPv4 networks requires confirmation.
+
+```bash
+python tools/discover_bmcs.py
+```
+
+For unattended use after reviewing the detected networks:
+
+```bash
+python tools/discover_bmcs.py --yes
+```
+
+For a specific subnet:
+
+```bash
+python tools/discover_bmcs.py --network 172.16.1.0/24
+```
+
+Passwords are never written to `config.json`. Set the shared BMC password in the current shell with:
+
+```bash
+eval "$(python tools/discover_bmcs.py --export-password)"
+```
+
+The generated configuration uses `CLUSTERMON_BMC_PASSWORD` for the discovered nodes.
 
 ## Quick start
 
@@ -109,6 +149,25 @@ cluster-mon/
     └── test_config.py
 ```
 
-v0.1 intentionally does not include Prometheus/Grafana, Redfish event
-subscriptions, GPU/storage/memory monitoring, alert rules, graphs, or
-automatic discovery.
+## Terminal-first by design
+
+ClusterMON is intentionally a terminal application. It does not require a web
+browser, web server, Prometheus, Grafana, Kubernetes, or another monitoring
+stack. The TUI provides both the operational dashboard and historical graphs.
+
+The goal is to run ClusterMON locally or over SSH and see useful node telemetry
+without leaving the terminal.
+
+## v0.2 graphs
+
+Select a node in the main table to view the last 15 minutes of:
+
+- CPU Die 1 temperature
+- CPU Die 2 temperature
+- Average fan RPM
+
+Graphs are rendered directly in the terminal and use the existing DuckDB metric
+history. No additional plotting service is required.
+
+v0.3 still intentionally does not include Prometheus/Grafana, Redfish event
+subscriptions, GPU/storage/memory monitoring, or alert rules.

@@ -14,10 +14,9 @@ def collect_power(node_id: str, chassis: dict, timestamp: datetime) -> List[Metr
             "power",
             "PowerState",
             "Chassis Power State",
-            chassis.get("PowerState"),
-            None,
-            status.get("Health"),
-            status.get("State"),
+            text_value=chassis.get("PowerState"),
+            health=status.get("Health"),
+            state=status.get("State"),
         )
     ]
 

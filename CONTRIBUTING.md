@@ -101,3 +101,30 @@ The UI should not know Redfish URLs or JSON structure.
 ## Security
 
 Never commit BMC passwords. Use environment variables.
+
+
+## Adding graph data
+
+Graphs use the same `Metric` history already stored in DuckDB. For a new
+telemetry graph:
+
+1. Add a component collector in `redfish/components.py`.
+2. Return timestamped `Metric` objects.
+3. Store them through the existing collector/database path.
+4. Add the metric to `ui/dashboard.py`'s graph queries and rendering only if
+   it belongs in the default dashboard.
+
+Do not introduce a web server or browser dependency for terminal graphs.
+
+
+## Database values
+
+Numeric metrics must use `Metric.value` and text states must use `Metric.text_value`. Do not stringify numeric telemetry before inserting it into DuckDB. This keeps graph/history queries numeric and prevents non-numeric values from silently disappearing from graphs.
+
+## Redfish clients
+
+The application creates one `RedfishClient` per configured node and reuses it across polling cycles. Collectors should use the provided client rather than creating their own HTTP client.
+
+## BMC discovery
+
+Prefer `--network` when possible. If no network is specified, discovery shows the detected local networks and asks for confirmation before scanning them. Use `--yes` only for trusted, unattended test-machine workflows.

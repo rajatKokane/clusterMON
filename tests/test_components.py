@@ -22,7 +22,8 @@ def test_collect_power():
 
     assert len(metrics) == 1
     assert metrics[0].member_id == "PowerState"
-    assert metrics[0].value == "On"
+    assert metrics[0].value is None
+    assert metrics[0].text_value == "On"
     assert metrics[0].health == "OK"
 
 
