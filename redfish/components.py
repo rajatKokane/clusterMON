@@ -43,10 +43,10 @@ def collect_cpu_die_temperatures(
                 "temperature",
                 member_id,
                 sensor.get("Name", member_id),
-                sensor.get("ReadingCelsius"),
-                "C",
-                status.get("Health"),
-                status.get("State"),
+                value=sensor.get("ReadingCelsius"),
+                unit="C",
+                health=status.get("Health"),
+                state=status.get("State"),
             )
         )
 
@@ -75,7 +75,7 @@ def collect_average_fan_speed(
             "fan",
             "AverageRPM",
             "Average Fan Speed",
-            sum(readings) / len(readings),
-            "RPM",
+            value=sum(readings) / len(readings),
+            unit="RPM",
         )
     ]

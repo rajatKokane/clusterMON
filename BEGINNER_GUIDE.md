@@ -90,7 +90,7 @@ In a factory or validation environment, it is perfectly reasonable to run Cluste
 First, enter the ClusterMON directory:
 
 ```bash
-cd cluster-mon
+cd clusterMON
 ```
 
 Create a Python virtual environment:
@@ -283,7 +283,7 @@ You do not remember the BMC addresses and want ClusterMON to find them.
 ### Step 1: Enter the project
 
 ```bash
-cd cluster-mon
+cd clusterMON
 ```
 
 ### Step 2: Activate the Python environment
@@ -340,7 +340,7 @@ For example:
 {
     "nodes": [
         {
-            "node_id": "test-server-01",
+            "node_id": "my-server-01",
             "bmc_url": "https://172.16.1.16",
             "username": "root",
             "password_env": "CLUSTERMON_BMC_PASSWORD",
@@ -349,6 +349,11 @@ For example:
     ]
 }
 ```
+
+The `password_env` name is yours to choose -- it just has to match the
+variable you export. `config.example.json` uses one variable per node
+(`CLUSTERMON_TEST_SERVER_01_PASSWORD`, etc.); discovery defaults every node
+to the same shared `CLUSTERMON_BMC_PASSWORD`. Either pattern works.
 
 Then:
 
@@ -394,7 +399,7 @@ The TUI reads historical data from it when displaying graphs.
 The most important files are:
 
 ```text
-cluster-mon/
+clusterMON/
 │
 ├── app.py
 │       Main application.
@@ -909,7 +914,7 @@ There is no service to stop and no web server to shut down.
 For a typical test-machine setup:
 
 ```bash
-cd cluster-mon
+cd clusterMON
 source .venv/bin/activate
 python tools/discover_bmcs.py --network 172.16.1.0/24
 export CLUSTERMON_BMC_PASSWORD='your-bmc-password'
@@ -961,7 +966,7 @@ That's the whole idea.
 ### First-time setup
 
 ```bash
-cd cluster-mon
+cd clusterMON
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt

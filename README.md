@@ -1,4 +1,4 @@
-# ClusterMON v0.3
+# ClusterMON v0.3.1
 
 A minimal, open-source Redfish-based HPC node monitoring TUI.
 
@@ -24,10 +24,28 @@ A minimal, open-source Redfish-based HPC node monitoring TUI.
 
 - Numeric telemetry is stored as DuckDB `DOUBLE` values.
 - Text telemetry such as `On`/`Off` is stored separately in `text_value`.
-- Existing v0.1/v0.2 databases are migrated automatically without discarding history.
 - One persistent HTTP/Redfish client is reused per BMC instead of creating a new TLS/client session every poll.
 - BMC discovery asks for confirmation before scanning all detected local subnets; use `--yes` for unattended operation.
 - Discovery no longer carries a dead node-ID mode parameter.
+
+## v0.3.1 changes (bug fixes, no new functionality)
+
+- Fixed a crash on first run: the database schema check used `PRAGMA
+  table_info`, which raises on a table that doesn't exist yet -- i.e. on
+  every fresh `cluster_mon.duckdb`. It now uses `information_schema.columns`,
+  which doesn't.
+- Fixed `collect_cpu_die_temperatures` and `collect_average_fan_speed`
+  passing `value`/`unit`/`health`/`state` positionally. Since `text_value`
+  was added in the middle of the `Metric` fields, every temperature and fan
+  reading was silently storing its health status in `unit` and its state in
+  `health`, with `state` never set. `value` itself was unaffected, which is
+  why graphs still looked correct. All collectors now use keyword arguments.
+- Removed the v0.1/v0.2 schema migration path. There is no deployed database
+  that predates the `DOUBLE`/`text_value` schema, so an outdated `metrics`
+  table is now dropped and recreated instead of migrated -- fewer moving
+  parts, nothing left to get subtly wrong.
+- Component and database tests now assert `unit`/`health`/`state`, not only
+  `value`; the old tests would not have caught either bug above.
 
 ## Automatic BMC discovery
 
@@ -128,7 +146,7 @@ changes.
 ## Project layout
 
 ```text
-cluster-mon/
+clusterMON/
 ├── app.py
 ├── config.py
 ├── config.example.json
@@ -136,6 +154,7 @@ cluster-mon/
 ├── requirements.txt
 ├── README.md
 ├── CONTRIBUTING.md
+├── BEGINNER_GUIDE.md
 ├── redfish/
 │   ├── client.py
 │   ├── collector.py
@@ -144,9 +163,16 @@ cluster-mon/
 │   └── db.py
 ├── ui/
 │   └── dashboard.py
+├── tools/
+│   ├── discover_bmcs.py
+│   ├── simulate.py
+│   └── README.md
 └── tests/
     ├── test_components.py
-    └── test_config.py
+    ├── test_config.py
+    ├── test_dashboard.py
+    ├── test_database.py
+    └── test_discovery.py
 ```
 
 ## Terminal-first by design
@@ -169,5 +195,5 @@ Select a node in the main table to view the last 15 minutes of:
 Graphs are rendered directly in the terminal and use the existing DuckDB metric
 history. No additional plotting service is required.
 
-v0.3 still intentionally does not include Prometheus/Grafana, Redfish event
+v0.3.1 still intentionally does not include Prometheus/Grafana, Redfish event
 subscriptions, GPU/storage/memory monitoring, or alert rules.

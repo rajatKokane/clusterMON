@@ -46,13 +46,18 @@ def collect_memory(node_id, resource, timestamp):
             "memory",
             "TotalMemory",
             "Total Memory",
-            512,
-            "GiB",
-            "OK",
-            "Enabled",
+            value=512,
+            unit="GiB",
+            health="OK",
+            state="Enabled",
         )
     ]
 ```
+
+Always pass `value`, `text_value`, `unit`, `health`, and `state` as keyword
+arguments. They're easy to get out of order positionally, and a reordering
+mistake does not raise an error -- it just silently stores the wrong field
+in the wrong column.
 
 ## Add a TUI field
 
@@ -79,6 +84,10 @@ pytest
 ```
 
 Component tests use synthetic Redfish data and do not require a physical BMC.
+
+A new collector's test must assert `value`, `unit`, `health`, and `state` --
+not only `value`. A sensor can have the right number and still have the
+wrong unit or health information attached to it.
 
 ## Design rule
 

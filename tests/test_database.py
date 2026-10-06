@@ -48,10 +48,25 @@ def test_power_state_is_stored_as_text(tmp_path):
     database.close()
 
 
-def test_legacy_string_schema_is_migrated(tmp_path):
+def test_fresh_database_creates_schema_without_error(tmp_path):
+    # Regression test: information_schema.columns must be used instead of
+    # PRAGMA table_info, which raises CatalogException on a table that
+    # doesn't exist yet -- i.e. on every first-ever run of the app.
+    database = Database(tmp_path / "fresh.duckdb")
+    columns = database._connection.execute(
+        "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'metrics'"
+    ).fetchall()
+    column_map = {name: dtype.upper() for name, dtype in columns}
+    assert column_map["value"] == "DOUBLE"
+    assert "text_value" in column_map
+    database.close()
+
+
+def test_outdated_schema_is_dropped_and_recreated(tmp_path):
+    # No migration framework: an old-shaped table just gets replaced.
     import duckdb
 
-    path = tmp_path / "legacy.duckdb"
+    path = tmp_path / "outdated.duckdb"
     connection = duckdb.connect(str(path))
     connection.execute("""
         CREATE TABLE metrics (
@@ -68,23 +83,19 @@ def test_legacy_string_schema_is_migrated(tmp_path):
     """)
     connection.execute(
         "INSERT INTO metrics VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        ["node-01", datetime.now(), "temperature", "Die_CPU1", "CPU", "42.5", "C", None, None],
-    )
-    connection.execute(
-        "INSERT INTO metrics VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         ["node-01", datetime.now(), "power", "PowerState", "Power", "On", None, "OK", "Enabled"],
     )
     connection.close()
 
     database = Database(path)
-    columns = database._connection.execute("PRAGMA table_info('metrics')").fetchall()
-    column_map = {row[1]: str(row[2]).upper() for row in columns}
+    columns = database._connection.execute(
+        "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'metrics'"
+    ).fetchall()
+    column_map = {name: dtype.upper() for name, dtype in columns}
     assert column_map["value"] == "DOUBLE"
     assert "text_value" in column_map
 
-    rows = database._connection.execute(
-        "SELECT value, text_value FROM metrics ORDER BY category"
-    ).fetchall()
-    assert rows[0] == (None, "On")
-    assert rows[1] == (42.5, None)
+    # The old row is gone -- this is a deliberate drop, not a bug.
+    rows = database._connection.execute("SELECT count(*) FROM metrics").fetchone()
+    assert rows[0] == 0
     database.close()

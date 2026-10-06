@@ -46,7 +46,7 @@ async def collect_all(nodes, clients):
 
 
 class ClusterMON(App):
-    TITLE = "ClusterMON v0.3"
+    TITLE = "ClusterMON v0.3.1"
 
     CSS = '''
     Screen { layout: vertical; }

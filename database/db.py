@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -5,6 +6,8 @@ import duckdb
 
 from models import Metric
 
+
+LOGGER = logging.getLogger("clustermon.database")
 
 SCHEMA = '''
 CREATE TABLE IF NOT EXISTS metrics (
@@ -29,73 +32,23 @@ class Database:
         self._ensure_schema()
 
     def _ensure_schema(self):
+        # information_schema never raises for a table that doesn't exist yet,
+        # unlike PRAGMA table_info -- that distinction is the whole fix.
         columns = self._connection.execute(
-            "PRAGMA table_info('metrics')"
+            "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'metrics'"
         ).fetchall()
 
         if not columns:
             self._connection.execute(SCHEMA)
             return
 
-        column_map = {row[1]: str(row[2]).upper() for row in columns}
+        column_map = {name: dtype.upper() for name, dtype in columns}
         if column_map.get("value") != "DOUBLE" or "text_value" not in column_map:
-            self._migrate_v02_schema(column_map)
-
-    def _migrate_v02_schema(self, column_map):
-        """Migrate the v0.1/v0.2 string value column without losing history."""
-        self._connection.execute("BEGIN TRANSACTION")
-        try:
-            self._connection.execute("DROP TABLE IF EXISTS metrics_v03")
-            self._connection.execute(
-                '''
-                CREATE TABLE metrics_v03 (
-                    node_id VARCHAR NOT NULL,
-                    timestamp TIMESTAMP NOT NULL,
-                    category VARCHAR NOT NULL,
-                    member_id VARCHAR NOT NULL,
-                    name VARCHAR NOT NULL,
-                    value DOUBLE,
-                    text_value VARCHAR,
-                    unit VARCHAR,
-                    health VARCHAR,
-                    state VARCHAR
-                )
-                '''
-            )
-
-            legacy_value = "value" if "value" in column_map else "NULL"
-            legacy_text = "text_value" if "text_value" in column_map else "NULL"
-
-            self._connection.execute(
-                f'''
-                INSERT INTO metrics_v03 (
-                    node_id, timestamp, category, member_id, name,
-                    value, text_value, unit, health, state
-                )
-                SELECT
-                    node_id,
-                    timestamp,
-                    category,
-                    member_id,
-                    name,
-                    TRY_CAST({legacy_value} AS DOUBLE),
-                    CASE
-                        WHEN TRY_CAST({legacy_value} AS DOUBLE) IS NULL
-                        THEN {legacy_text}
-                        ELSE NULL
-                    END,
-                    unit,
-                    health,
-                    state
-                FROM metrics
-                '''
-            )
+            # No migration framework: nothing currently in front of a real
+            # BMC predates this schema, so there's no history to preserve.
+            LOGGER.warning("metrics table has an outdated schema in %s; recreating it", self.path)
             self._connection.execute("DROP TABLE metrics")
-            self._connection.execute("ALTER TABLE metrics_v03 RENAME TO metrics")
-            self._connection.execute("COMMIT")
-        except Exception:
-            self._connection.execute("ROLLBACK")
-            raise
+            self._connection.execute(SCHEMA)
 
     def insert_metrics(self, metrics):
         rows = [
